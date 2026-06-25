@@ -517,7 +517,12 @@
     margin-bottom: 14px;
     box-shadow: 0 8px 32px rgba(0,0,0,0.5);
     border: 2px solid var(--glass-border);
+    cursor: zoom-in;
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
   }
+  .dv-photo:hover { transform: scale(1.04); box-shadow: 0 12px 40px rgba(167,139,250,0.25), 0 8px 32px rgba(0,0,0,0.5); border-color: rgba(167,139,250,0.4); }
+  .dv-photo:active { transform: scale(0.97); }
   .dv-breed { font-size: 14px; color: var(--text2); margin-top: 4px; }
   .dv-tags { display: flex; gap: 8px; justify-content: center; margin-top: 14px; }
 
@@ -638,6 +643,94 @@
     letter-spacing: 0.5px;
     font-family: 'Syne', sans-serif;
   }
+
+  /* ── IMAGE ZOOM MODAL ── */
+  #img-zoom-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 9998;
+    background: rgba(0,0,0,0.92);
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(12px);
+    animation: fadeInModal 0.2s ease;
+  }
+  #img-zoom-modal.open { display: flex; }
+  @keyframes fadeInModal { from{opacity:0} to{opacity:1} }
+  .zoom-img-wrap {
+    position: relative;
+    max-width: 92vw;
+    max-height: 88vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #zoom-img {
+    max-width: 92vw;
+    max-height: 82vh;
+    border-radius: 18px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+    border: 2px solid rgba(167,139,250,0.3);
+    object-fit: contain;
+    animation: zoomIn 0.25s cubic-bezier(0.16,1,0.3,1);
+  }
+  @keyframes zoomIn { from{transform:scale(0.85);opacity:0} to{transform:scale(1);opacity:1} }
+  .zoom-close {
+    position: absolute;
+    top: -14px;
+    right: -14px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(30,28,50,0.95);
+    border: 1px solid rgba(167,139,250,0.4);
+    color: var(--text2);
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    z-index: 2;
+  }
+  .zoom-caption {
+    position: absolute;
+    bottom: -40px;
+    left: 0; right: 0;
+    text-align: center;
+    color: var(--text2);
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'Syne', sans-serif;
+    letter-spacing: 0.3px;
+  }
+
+  /* ── SPEAK BUTTON ── */
+  .dv-speak-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 10px auto 0;
+    background: linear-gradient(135deg, rgba(124,58,237,0.25), rgba(79,70,229,0.2));
+    border: 1px solid rgba(167,139,250,0.35);
+    border-radius: 24px;
+    padding: 10px 22px;
+    color: var(--violet);
+    font-size: 13px;
+    font-weight: 700;
+    font-family: 'Syne', sans-serif;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    box-shadow: 0 0 16px rgba(167,139,250,0.1);
+  }
+  .dv-speak-btn:hover { background: linear-gradient(135deg, rgba(124,58,237,0.4), rgba(79,70,229,0.35)); box-shadow: 0 0 20px rgba(167,139,250,0.25); }
+  .dv-speak-btn:active { transform: scale(0.94); }
+  .dv-speak-btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .dv-speak-btn.speaking { color: var(--coral); border-color: rgba(255,107,107,0.4); background: rgba(255,107,107,0.12); animation: speakPulse 1s ease-in-out infinite; }
+  @keyframes speakPulse { 0%,100%{box-shadow:0 0 8px rgba(255,107,107,0.2)} 50%{box-shadow:0 0 22px rgba(255,107,107,0.5)} }
 
   /* ── FLASH ── */
   .flash {
@@ -788,10 +881,14 @@
   </div>
   <div class="dv-hero">
     <span class="dv-emoji" id="dv-emoji"></span>
-    <img class="dv-photo" id="dv-photo" src="" alt="" style="display:none">
+    <img class="dv-photo" id="dv-photo" src="" alt="" style="display:none;cursor:zoom-in;" onclick="openZoomModal(this.src, this.alt)" title="Toca para ampliar">
     <div class="dv-name" id="dv-name"></div>
     <div class="dv-breed" id="dv-breed"></div>
     <div class="dv-tags" id="dv-tags"></div>
+    <button class="dv-speak-btn" id="dv-speak-btn" onclick="speakPetInfo()">
+      <svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+      Escuchar descripción
+    </button>
   </div>
   <div class="dv-section">
     <h3>Datos básicos</h3>
@@ -833,6 +930,15 @@
     <div id="edit-name-error" style="color:#ff6b6b;font-size:12px;text-align:center;min-height:18px;margin-bottom:8px;"></div>
     <button onclick="saveEditedName()" style="width:100%;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:700;font-family:'Syne',sans-serif;cursor:pointer;letter-spacing:0.3px;">Guardar →</button>
     <button onclick="closeEditNameModal()" style="width:100%;background:none;border:none;color:#4e4d6a;font-size:13px;margin-top:10px;cursor:pointer;padding:6px;">Cancelar</button>
+  </div>
+</div>
+
+<!-- IMAGE ZOOM MODAL -->
+<div id="img-zoom-modal" onclick="closeZoomModal(event)">
+  <div class="zoom-img-wrap">
+    <button class="zoom-close" onclick="closeZoomModal()">✕</button>
+    <img id="zoom-img" src="" alt="">
+    <div class="zoom-caption" id="zoom-caption"></div>
   </div>
 </div>
 
@@ -1455,6 +1561,122 @@ function deletePet() {
   renderGrid();
   closeDetail();
 }
+
+// ── IMAGE ZOOM MODAL ──
+function openZoomModal(src, alt) {
+  if (!src) return;
+  document.getElementById('zoom-img').src = src;
+  document.getElementById('zoom-caption').textContent = alt || '';
+  document.getElementById('img-zoom-modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeZoomModal(e) {
+  if (e && e.target !== document.getElementById('img-zoom-modal') && !e.target.classList.contains('zoom-close')) return;
+  if (!e) {
+    document.getElementById('img-zoom-modal').classList.remove('open');
+    document.body.style.overflow = '';
+    return;
+  }
+  document.getElementById('img-zoom-modal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeZoomModal();
+});
+
+// ── SPEAK PET INFO ──
+let bgAudio = null;
+let isSpeaking = false;
+
+function speakPetInfo() {
+  if (!currentPet) return;
+  const btn = document.getElementById('dv-speak-btn');
+
+  // Si ya está hablando, cancelar
+  if (isSpeaking) {
+    window.speechSynthesis.cancel();
+    if (bgAudio) { bgAudio.pause(); bgAudio.currentTime = 0; }
+    isSpeaking = false;
+    btn.classList.remove('speaking');
+    btn.innerHTML = `<svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg> Escuchar descripción`;
+    return;
+  }
+
+  const p = currentPet;
+  const aiText = document.getElementById('dv-ai').textContent || '';
+  const isLoading = document.querySelector('#dv-ai .ai-loading-dots');
+
+  // Construir texto a leer
+  const tipoLabel = p.type === 'Perro' ? 'perro' : 'gato';
+  let textoVoz = `${p.name}. ${tipoLabel} ${p.breed}, originario de ${p.origin}. Tamaño ${p.size}. Vida promedio de ${p.life}.`;
+  if (aiText && !isLoading && aiText !== 'Configura tu API key primero.' && aiText !== 'No se pudo cargar la descripción.') {
+    textoVoz += ' ' + aiText;
+  }
+
+  // Música de fondo con el archivo MP3 de la Pokédex
+  try {
+    bgAudio = new Audio();
+    // Intentar cargar desde archivo local (usuario debe tener el MP3 en misma carpeta)
+    bgAudio.src = 'datos_de_la_pokedex_primera_generacion__anime_.mp3';
+    bgAudio.volume = 0.22;
+    bgAudio.loop = true;
+    bgAudio.play().catch(() => {}); // silencioso si no está disponible
+  } catch(e) {}
+
+  // Síntesis de voz
+  window.speechSynthesis.cancel();
+  const utt = new SpeechSynthesisUtterance(textoVoz);
+  utt.lang = 'es-ES';
+  utt.rate = 0.88;
+  utt.pitch = 0.75; // voz grave tipo Pokédex
+  utt.volume = 1;
+
+  // Intentar voz en español
+  const voices = window.speechSynthesis.getVoices();
+  const esVoice = voices.find(v => v.lang.startsWith('es') && (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('jorge') || v.name.toLowerCase().includes('diego') || v.name.toLowerCase().includes('español')))
+    || voices.find(v => v.lang.startsWith('es'));
+  if (esVoice) utt.voice = esVoice;
+
+  isSpeaking = true;
+  btn.classList.add('speaking');
+  btn.innerHTML = `<svg viewBox="0 0 24 24"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> Detener`;
+
+  utt.onend = function() {
+    isSpeaking = false;
+    btn.classList.remove('speaking');
+    btn.innerHTML = `<svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg> Escuchar descripción`;
+    if (bgAudio) { bgAudio.pause(); bgAudio.currentTime = 0; }
+  };
+  utt.onerror = function() {
+    isSpeaking = false;
+    btn.classList.remove('speaking');
+    btn.innerHTML = `<svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg> Escuchar descripción`;
+    if (bgAudio) { bgAudio.pause(); bgAudio.currentTime = 0; }
+  };
+
+  // Cargar voces si aún no están disponibles
+  if (!voices.length) {
+    window.speechSynthesis.onvoiceschanged = function() {
+      const v2 = window.speechSynthesis.getVoices();
+      const esV = v2.find(v => v.lang.startsWith('es'));
+      if (esV) utt.voice = esV;
+      window.speechSynthesis.speak(utt);
+    };
+  } else {
+    window.speechSynthesis.speak(utt);
+  }
+}
+
+// Detener audio al cerrar detalle
+const _origCloseDetail = closeDetail;
+closeDetail = function() {
+  window.speechSynthesis.cancel();
+  if (bgAudio) { bgAudio.pause(); bgAudio.currentTime = 0; }
+  isSpeaking = false;
+  _origCloseDetail();
+};
 
 // INIT
 updateStats();
