@@ -957,7 +957,7 @@ async function analyzePhoto() {
   if (!imgData) return;
 
   // Leer API key del localStorage (configurada en settings si existe, o pedir)
-  let apiKey = localStorage.getItem('petdex_apikey') || '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';
+  let apiKey = localStorage.getItem('petdex_apikey') || '';
   if (!apiKey) {
     apiKey = prompt('Ingresa tu Anthropic API key para usar PetDex:\n(Se guardará en este dispositivo)') || '';
     if (!apiKey) {
@@ -1001,7 +1001,13 @@ async function analyzePhoto() {
       // Si la key es inválida, borrarla para que pida una nueva
       if (detectRes.status === 401) {
         localStorage.removeItem('petdex_apikey');
-        document.getElementById('ai-result').textContent = 'API key inválida. Recarga la página para ingresar una nueva.';
+        const newKey = prompt('⚠️ API key inválida o expirada.\n\nIngresa una API key válida de Anthropic:') || '';
+        if (newKey.trim()) {
+          localStorage.setItem('petdex_apikey', newKey.trim());
+          document.getElementById('ai-result').textContent = 'API key guardada. ¡Intenta de nuevo!';
+        } else {
+          document.getElementById('ai-result').textContent = 'Sin API key. Ve a Ajustes para configurarla.';
+        }
       } else if (detectRes.status === 429) {
         document.getElementById('ai-result').textContent = 'Demasiadas solicitudes. Espera unos segundos e intenta de nuevo.';
       } else {
@@ -1227,7 +1233,7 @@ function openDetail(i) {
 }
 
 async function loadDetailAI(p) {
-  const apiKey = localStorage.getItem('petdex_apikey') || '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';
+  const apiKey = localStorage.getItem('petdex_apikey') || '';
   if (!apiKey) { document.getElementById('dv-ai').textContent = 'Configura tu API key capturando una mascota primero.'; return; }
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
