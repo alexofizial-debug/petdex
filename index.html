@@ -783,6 +783,19 @@
   </div>
 </div>
 
+<!-- API KEY MODAL -->
+<div id="apikey-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:24px;">
+  <div style="background:#1c1c2e;border:1px solid rgba(167,139,250,0.3);border-radius:22px;padding:28px 22px;max-width:360px;width:100%;box-shadow:0 0 40px rgba(167,139,250,0.2);">
+    <div style="font-size:40px;text-align:center;margin-bottom:12px;">🔑</div>
+    <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:#f0eeff;text-align:center;margin-bottom:8px;">API Key de Anthropic</div>
+    <div style="font-size:13px;color:#8b8aa8;text-align:center;line-height:1.6;margin-bottom:20px;">Para analizar mascotas con IA necesitas una key de <strong style="color:#a78bfa">console.anthropic.com</strong><br>Se guarda solo en tu dispositivo.</div>
+    <input id="apikey-input" type="password" placeholder="sk-ant-api03-..." style="width:100%;background:#0d0d14;border:1px solid rgba(167,139,250,0.3);border-radius:12px;padding:14px 16px;color:#f0eeff;font-size:14px;font-family:'Inter',sans-serif;outline:none;margin-bottom:10px;" />
+    <div id="apikey-error" style="color:#ff6b6b;font-size:12px;text-align:center;min-height:18px;margin-bottom:8px;"></div>
+    <button onclick="saveApiKeyFromModal()" style="width:100%;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:700;font-family:'Syne',sans-serif;cursor:pointer;letter-spacing:0.3px;">Guardar y continuar →</button>
+    <button onclick="closeApiKeyModal()" style="width:100%;background:none;border:none;color:#4e4d6a;font-size:13px;margin-top:10px;cursor:pointer;padding:6px;">Cancelar</button>
+  </div>
+</div>
+
 <!-- FLASH -->
 <div class="flash" id="flash"><div class="flash-msg" id="flash-msg">✦ ¡Capturado!</div></div>
 
@@ -956,17 +969,11 @@ async function analyzePhoto() {
   const imgData = capturedImgData;
   if (!imgData) return;
 
-  // Leer API key del localStorage (configurada en settings si existe, o pedir)
   let apiKey = localStorage.getItem('petdex_apikey') || '';
   if (!apiKey) {
-    apiKey = prompt('Ingresa tu Anthropic API key para usar PetDex:\n(Se guardará en este dispositivo)') || '';
-    if (!apiKey) {
-      document.getElementById('ai-result').textContent = 'Necesitas una API key de Anthropic para analizar mascotas.';
-      setTimeout(resetScanUI, 3000);
-      return;
-    }
-    localStorage.setItem('petdex_apikey', apiKey.trim());
-    apiKey = apiKey.trim();
+    showApiKeyModal(() => analyzePhoto());
+    resetScanUI();
+    return;
   }
 
   const API_HEADERS = {
@@ -1001,13 +1008,10 @@ async function analyzePhoto() {
       // Si la key es inválida, borrarla para que pida una nueva
       if (detectRes.status === 401) {
         localStorage.removeItem('petdex_apikey');
-        const newKey = prompt('⚠️ API key inválida o expirada.\n\nIngresa una API key válida de Anthropic:') || '';
-        if (newKey.trim()) {
-          localStorage.setItem('petdex_apikey', newKey.trim());
-          document.getElementById('ai-result').textContent = 'API key guardada. ¡Intenta de nuevo!';
-        } else {
-          document.getElementById('ai-result').textContent = 'Sin API key. Ve a Ajustes para configurarla.';
-        }
+        document.getElementById('scan-emoji').textContent = '🔑';
+        document.getElementById('scan-label').textContent = 'KEY INVÁLIDA';
+        document.getElementById('ai-result').textContent = 'API key inválida. Ingresa una nueva.';
+        setTimeout(() => { resetScanUI(); showApiKeyModal(null); }, 2000);
       } else if (detectRes.status === 429) {
         document.getElementById('ai-result').textContent = 'Demasiadas solicitudes. Espera unos segundos e intenta de nuevo.';
       } else {
@@ -1140,14 +1144,45 @@ async function analyzePhoto() {
   }
 }
 
-function changeApiKey() {
-  const current = localStorage.getItem('petdex_apikey') || '';
-  const hint = current ? `(actual: ...${current.slice(-6)})` : '(no configurada)';
-  const newKey = prompt(`API Key de Anthropic ${hint}\n\nIngresa la nueva key o deja vacío para cancelar:`);
-  if (newKey && newKey.trim()) {
-    localStorage.setItem('petdex_apikey', newKey.trim());
-    alert('✅ API Key guardada correctamente.');
+// API KEY MODAL
+let _apiKeyCallback = null;
+
+function showApiKeyModal(callback) {
+  _apiKeyCallback = callback;
+  document.getElementById('apikey-error').textContent = '';
+  document.getElementById('apikey-input').value = '';
+  const modal = document.getElementById('apikey-modal');
+  modal.style.display = 'flex';
+  setTimeout(() => document.getElementById('apikey-input').focus(), 100);
+}
+
+function closeApiKeyModal() {
+  document.getElementById('apikey-modal').style.display = 'none';
+  _apiKeyCallback = null;
+}
+
+function saveApiKeyFromModal() {
+  const key = document.getElementById('apikey-input').value.trim();
+  if (!key || !key.startsWith('sk-ant-')) {
+    document.getElementById('apikey-error').textContent = '⚠️ La key debe empezar con sk-ant-...';
+    return;
   }
+  localStorage.setItem('petdex_apikey', key);
+  document.getElementById('apikey-modal').style.display = 'none';
+  const cb = _apiKeyCallback;
+  _apiKeyCallback = null;
+  if (cb) cb();
+}
+
+// Permitir Enter en el input
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('apikey-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') saveApiKeyFromModal();
+  });
+});
+
+function changeApiKey() {
+  showApiKeyModal(null);
 }
 
 // STATS
@@ -1234,7 +1269,7 @@ function openDetail(i) {
 
 async function loadDetailAI(p) {
   const apiKey = localStorage.getItem('petdex_apikey') || '';
-  if (!apiKey) { document.getElementById('dv-ai').textContent = 'Configura tu API key capturando una mascota primero.'; return; }
+  if (!apiKey) { document.getElementById('dv-ai').textContent = 'Configura tu API key primero.'; return; }
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method:'POST',
