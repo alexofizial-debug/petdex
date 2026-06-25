@@ -354,8 +354,7 @@ async function startCamera() {
     video.srcObject = stream;
     document.getElementById('cam-start').style.display = 'none';
     cameraActive = true;
-    document.getElementById('cam-tip').textContent = 'Apunta a un gato o perro y toca el botón para capturarlo con análisis IA.';
-    scanLoop();
+    document.getElementById('cam-tip').textContent = 'Apunta a un gato o perro y toca el botón para capturarlo. ¡La IA detectará si hay una mascota real!';
   } catch(e) {
     alert('No se pudo acceder a la cámara: ' + e.message + '\n\nAsegúrate de abrir este archivo en un navegador real (Chrome, Safari) y dar permiso de cámara.');
   }
@@ -364,33 +363,6 @@ async function startCamera() {
 async function flipCamera() {
   facingMode = facingMode === 'environment' ? 'user' : 'environment';
   if (cameraActive) await startCamera();
-}
-
-// Scan loop — picks a random "nearby" pet every few seconds
-function scanLoop() {
-  if (!cameraActive) return;
-  const rem = PETS.filter(p => !collection.find(c => c.name === p.name));
-  if (!rem.length) { document.getElementById('scan-label').textContent = '¡TODOS CAPTURADOS!'; return; }
-
-  const weights = rem.map(p => p.rarity==='legendary'?1:p.rarity==='rare'?4:10);
-  const total = weights.reduce((a,b)=>a+b,0);
-  let r = Math.random()*total;
-  let pet = rem[rem.length-1];
-  for (let i=0;i<rem.length;i++){r-=weights[i];if(r<=0){pet=rem[i];break;}}
-  scannedPet = pet;
-
-  document.getElementById('scan-emoji').textContent = pet.emoji;
-  document.getElementById('scan-label').textContent = (pet.breed + ' CERCA').toUpperCase();
-
-  const rp = document.getElementById('rar-pill');
-  rp.className = 'rarity-pill show rp-' + pet.rarity;
-  rp.textContent = pet.rarity==='legendary'?'⭐ Legendario':pet.rarity==='rare'?'🔶 Raro':'Común';
-
-  const dp = document.getElementById('det-pill');
-  dp.classList.add('show');
-  setTimeout(()=>dp.classList.remove('show'), 2000);
-
-  setTimeout(scanLoop, 4000 + Math.random()*3000);
 }
 
 function captureFrame() {
@@ -402,59 +374,131 @@ function captureFrame() {
   return canvas.toDataURL('image/jpeg', 0.7).split(',')[1];
 }
 
-async function captureAction() {
-  if (!cameraActive) { await startCamera(); return; }
-  if (!scannedPet) return;
-
-  const pet = scannedPet;
-  if (collection.find(c => c.name === pet.name)) {
-    scannedPet = null;
-    return;
-  }
-
-  collection.push(pet);
-  save();
-  updateStats();
-
-  const msg = pet.rarity==='legendary'?'⭐ ¡LEGENDARIO!':pet.rarity==='rare'?'🔶 ¡Raro capturado!':'✦ ¡Capturado!';
-  const flash = document.getElementById('flash');
-  document.getElementById('flash-msg').textContent = msg;
-  flash.classList.add('go');
-  setTimeout(()=>flash.classList.remove('go'), 550);
-
-  // Get image and run AI
-  const imgData = captureFrame();
-  const aiBox = document.getElementById('ai-box');
-  aiBox.classList.add('show');
-  document.getElementById('ai-result').innerHTML = '<div class="ai-loading-dots"><span></span><span></span><span></span></div>';
-  document.getElementById('cam-tip').style.display = 'none';
-
-  runAICapture(pet, imgData);
+// Reset UI to "waiting" state
+function resetScanUI() {
+  document.getElementById('scan-emoji').textContent = '📷';
+  document.getElementById('scan-label').textContent = 'APUNTA A UNA MASCOTA';
+  document.getElementById('rar-pill').className = 'rarity-pill';
+  document.getElementById('det-pill').classList.remove('show');
   scannedPet = null;
 }
 
-async function runAICapture(pet, imgData) {
+async function captureAction() {
+  if (!cameraActive) { await startCamera(); return; }
+
+  // Show scanning state
+  document.getElementById('scan-emoji').textContent = '🔍';
+  document.getElementById('scan-label').textContent = 'ANALIZANDO...';
+  document.getElementById('ai-box').classList.add('show');
+  document.getElementById('ai-result').innerHTML = '<div class="ai-loading-dots"><span></span><span></span><span></span></div>';
+  document.getElementById('cam-tip').style.display = 'none';
+
+  const imgData = captureFrame();
+
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    // Step 1: Ask AI what animal is in the photo
+    const detectRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 250,
+        max_tokens: 120,
         messages: [{
           role: 'user',
           content: [
             { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: imgData } },
-            { type: 'text', text: `Estás mirando una foto que acaba de tomar el usuario. Se supone que capturó un(a) ${pet.breed} (${pet.type}). Primero di si ves un animal en la imagen (aunque sea borroso). Luego da 1-2 oraciones sobre la raza ${pet.breed}: su personalidad y un dato curioso. Responde en español, tono amigable y breve.` }
+            { type: 'text', text: `Mira esta imagen y responde SOLO en formato JSON sin texto extra, así:
+{"animal": "gato" o "perro" o "ninguno", "raza": "nombre de la raza si puedes identificarla, si no escribe desconocida"}
+Solo responde el JSON, nada más.` }
           ]
         }]
       })
     });
-    const data = await res.json();
-    const text = data.content?.map(b=>b.text||'').join('') || 'No se pudo analizar.';
-    document.getElementById('ai-result').textContent = text;
+    const detectData = await detectRes.json();
+    const rawText = detectData.content?.map(b=>b.text||'').join('').trim() || '{}';
+    let detection = {};
+    try { detection = JSON.parse(rawText.replace(/```json|```/g,'')); } catch(e) { detection = {animal:'ninguno'}; }
+
+    if (!detection.animal || detection.animal === 'ninguno') {
+      // No animal detected
+      document.getElementById('scan-emoji').textContent = '❌';
+      document.getElementById('scan-label').textContent = 'NO SE DETECTÓ MASCOTA';
+      document.getElementById('ai-result').textContent = 'No encontré ningún gato ni perro en la foto. ¡Intenta apuntar más de cerca a tu mascota!';
+      setTimeout(resetScanUI, 3000);
+      return;
+    }
+
+    // Step 2: Match detected animal to a pet in the collection
+    const tipo = detection.animal === 'gato' ? 'Gato' : 'Perro';
+    const razaDetectada = (detection.raza || '').toLowerCase();
+
+    // Try to match by breed name, otherwise pick random of that type not yet captured
+    const rem = PETS.filter(p => p.type === tipo && !collection.find(c => c.name === p.name));
+    if (!rem.length) {
+      document.getElementById('scan-emoji').textContent = '✅';
+      document.getElementById('scan-label').textContent = '¡YA LOS TIENES TODOS!';
+      document.getElementById('ai-result').textContent = `¡Ya capturaste todos los ${tipo.toLowerCase()}s disponibles!`;
+      setTimeout(resetScanUI, 3000);
+      return;
+    }
+
+    // Try breed match first
+    let pet = rem.find(p => p.breed.toLowerCase().includes(razaDetectada) || razaDetectada.includes(p.breed.toLowerCase()));
+
+    // If no match, pick weighted random of same type
+    if (!pet) {
+      const weights = rem.map(p => p.rarity==='legendary'?1:p.rarity==='rare'?4:10);
+      const total = weights.reduce((a,b)=>a+b,0);
+      let r = Math.random()*total;
+      pet = rem[rem.length-1];
+      for (let i=0;i<rem.length;i++){r-=weights[i];if(r<=0){pet=rem[i];break;}}
+    }
+
+    // Add to collection
+    collection.push(pet);
+    save();
+    updateStats();
+
+    // Show capture UI
+    document.getElementById('scan-emoji').textContent = pet.emoji;
+    document.getElementById('scan-label').textContent = (pet.breed + ' CAPTURADO').toUpperCase();
+
+    const rp = document.getElementById('rar-pill');
+    rp.className = 'rarity-pill show rp-' + pet.rarity;
+    rp.textContent = pet.rarity==='legendary'?'⭐ Legendario':pet.rarity==='rare'?'🔶 Raro':'Común';
+
+    const msg = pet.rarity==='legendary'?'⭐ ¡LEGENDARIO!':pet.rarity==='rare'?'🔶 ¡Raro capturado!':'✦ ¡Capturado!';
+    const flash = document.getElementById('flash');
+    document.getElementById('flash-msg').textContent = msg;
+    flash.classList.add('go');
+    setTimeout(()=>flash.classList.remove('go'), 550);
+
+    // Step 3: Get fun description of the captured pet
+    const descRes = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 200,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: imgData } },
+            { type: 'text', text: `Detecté un(a) ${tipo} en la imagen y lo registré como ${pet.breed}. Da una descripción amigable y breve (2 oraciones): menciona algo de lo que ves en la foto y un dato curioso sobre la raza ${pet.breed}. Responde en español.` }
+          ]
+        }]
+      })
+    });
+    const descData = await descRes.json();
+    const descText = descData.content?.map(b=>b.text||'').join('') || `¡${pet.name} el ${pet.breed} capturado!`;
+    document.getElementById('ai-result').textContent = descText;
+
+    scannedPet = null;
+    setTimeout(resetScanUI, 6000);
+
   } catch(e) {
-    document.getElementById('ai-result').textContent = `¡${pet.name} el ${pet.breed} capturado! No se pudo obtener análisis IA en este momento.`;
+    document.getElementById('ai-result').textContent = 'Error al analizar la imagen. Verifica tu conexión e intenta de nuevo.';
+    setTimeout(resetScanUI, 3000);
   }
 }
 
