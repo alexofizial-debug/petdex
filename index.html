@@ -957,7 +957,7 @@ async function analyzePhoto() {
   if (!imgData) return;
 
   // Leer API key del localStorage (configurada en settings si existe, o pedir)
-  let apiKey = localStorage.getItem('petdex_apikey') || '';
+  let apiKey = localStorage.getItem('petdex_apikey') || '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';
   if (!apiKey) {
     apiKey = prompt('Ingresa tu Anthropic API key para usar PetDex:\n(Se guardará en este dispositivo)') || '';
     if (!apiKey) {
@@ -1227,7 +1227,7 @@ function openDetail(i) {
 }
 
 async function loadDetailAI(p) {
-  const apiKey = localStorage.getItem('petdex_apikey') || '';
+  const apiKey = localStorage.getItem('petdex_apikey') || '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';
   if (!apiKey) { document.getElementById('dv-ai').textContent = 'Configura tu API key capturando una mascota primero.'; return; }
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
