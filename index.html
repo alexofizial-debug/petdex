@@ -887,7 +887,7 @@
     <div class="dv-tags" id="dv-tags"></div>
     <button class="dv-speak-btn" id="dv-speak-btn" onclick="speakPetInfo()">
       <svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
-      Escuchar descripción
+      Análisis J.A.R.V.I.S.
     </button>
   </div>
   <div class="dv-section">
@@ -1588,17 +1588,36 @@ document.addEventListener('keydown', function(e) {
 
 // ── SPEAK PET INFO ──
 let isSpeaking = false;
-let _ttsAudio = null;
 
 function stopVoice() {
   window.speechSynthesis.cancel();
-  if (_ttsAudio) { _ttsAudio.pause(); _ttsAudio = null; }
   isSpeaking = false;
   const btn = document.getElementById('dv-speak-btn');
   if (btn) {
     btn.classList.remove('speaking');
-    btn.innerHTML = `<svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg> Escuchar descripción`;
+    btn.innerHTML = `<svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg> Análisis J.A.R.V.I.S.`;
   }
+}
+
+function buildJarvisTextoES(p, aiDesc) {
+  const tipo   = p.type === 'Perro' ? 'espécimen canino' : 'espécimen felino';
+  const rareza = p.rarity === 'legendary' ? 'de rareza excepcional'
+               : p.rarity === 'rare'      ? 'de rareza elevada'
+               :                            'de clasificación estándar';
+  const rasgos = p.traits && p.traits.length
+    ? `Métricas de comportamiento: ${p.traits.map(([l,v]) => `${l.toLowerCase()}, ${v} por ciento`).join('. ')}.`
+    : '';
+
+  let texto =
+    `Análisis completado. He identificado un ${tipo} ${rareza}. ` +
+    `Designación: ${p.name}. ` +
+    `Clasificación de raza: ${p.breed}. ` +
+    `Origen geográfico: ${p.origin}. ` +
+    `Perfil físico: tamaño ${p.size}. Expectativa de vida estimada: ${p.life}. ` +
+    rasgos;
+
+  if (aiDesc) texto += ` Inteligencia adicional: ${aiDesc}`;
+  return texto;
 }
 
 function speakPetInfo() {
@@ -1607,13 +1626,12 @@ function speakPetInfo() {
   if (isSpeaking) { stopVoice(); return; }
 
   const p = currentPet;
-  const aiText = document.getElementById('dv-ai').textContent || '';
-  const isLoading = document.querySelector('#dv-ai .ai-loading-dots');
-  const tipoLabel = p.type === 'Perro' ? 'perro' : 'gato';
-  let texto = `${p.name}. ${tipoLabel} ${p.breed}, originario de ${p.origin}. Tamaño ${p.size}. Vida promedio de ${p.life}.`;
-  if (aiText && !isLoading && aiText !== 'Configura tu API key primero.' && aiText !== 'No se pudo cargar la descripción.') {
-    texto += ' ' + aiText;
-  }
+  const aiEl = document.getElementById('dv-ai');
+  const sinInfo = ['Configura tu API key primero.', 'No se pudo cargar la descripción.'];
+  const aiText = (!aiEl.querySelector('.ai-loading-dots') && aiEl.textContent && !sinInfo.includes(aiEl.textContent.trim()))
+    ? aiEl.textContent.trim() : '';
+
+  const texto = buildJarvisTextoES(p, aiText);
 
   isSpeaking = true;
   btn.classList.add('speaking');
@@ -1622,29 +1640,38 @@ function speakPetInfo() {
   window.speechSynthesis.cancel();
   const utt = new SpeechSynthesisUtterance(texto);
 
-  // ── Parámetros calibrados al audio de referencia ──
-  // Pitch mediana del audio: ~292 Hz → voz aguda, robótica, femenina
-  // Tasa de sílabas: 4.2/s → rate ~0.92 (ligeramente más lento que natural)
-  // Sin pausas → habla fluida y continua
-  utt.lang = 'es-ES';
-  utt.rate  = 0.92;   // cadencia del audio de referencia
-  utt.pitch = 1.75;   // agudo-robótico (~290Hz relativo a voz femenina)
+  // ── JARVIS en español latino ──
+  // Voz masculina grave, formal, cadencia medida y autoritaria
+  // Español latinoamericano: es-MX, es-US, es-419
+  // pitch: 0.82 → barítono bajo (~110-120 Hz)
+  // rate:  0.86 → deliberado, con peso en cada palabra
+  utt.lang   = 'es-MX';
+  utt.rate   = 0.86;
+  utt.pitch  = 0.82;
   utt.volume = 1;
 
-  function applyVoiceAndSpeak() {
+  function aplicarVozYHablar() {
     const voices = window.speechSynthesis.getVoices();
 
-    // Prioridad: voces femeninas en español (base ~220Hz + pitch=1.75 ≈ 290Hz)
-    // En Mac: "Mónica", "Lucía", "Paulina"
-    // En Windows: "Helena", "Sabina", "Laura"
-    // En Android/Chrome: "Spanish (Spain) Female"
-    const esVoice =
-      voices.find(v => v.lang === 'es-ES' && /monica|mónica|lucia|lucía|helena|sabina|laura|paulina/i.test(v.name)) ||
-      voices.find(v => v.lang === 'es-ES') ||
-      voices.find(v => v.lang === 'es-MX' && /female|paulina/i.test(v.name)) ||
+    // Prioridad de voces masculinas en español latino:
+    // Mac:     Juan (es-MX, masculino — el más cercano a JARVIS latino)
+    // Windows: Microsoft Raul (es-MX), Microsoft Pablo (es-ES pero grave)
+    // Chrome:  Google español (es-US o es-MX)
+    // Android: voz del sistema en español
+    const voz =
+      voices.find(v => /juan/i.test(v.name)   && v.lang.startsWith('es')) ||
+      voices.find(v => /raul|raúl/i.test(v.name) && v.lang.startsWith('es')) ||
+      voices.find(v => /diego/i.test(v.name)  && v.lang.startsWith('es')) ||
+      voices.find(v => /jorge/i.test(v.name)  && v.lang.startsWith('es')) ||
+      voices.find(v => /pablo/i.test(v.name)  && v.lang.startsWith('es')) ||
+      voices.find(v => /miguel/i.test(v.name) && v.lang.startsWith('es')) ||
+      voices.find(v => /carlos/i.test(v.name) && v.lang.startsWith('es')) ||
+      voices.find(v => (v.lang === 'es-MX' || v.lang === 'es-US') && !/female|mujer|lucia|mónica|paulina|monica|valeria/i.test(v.name)) ||
+      voices.find(v => v.lang === 'es-MX') ||
+      voices.find(v => v.lang.startsWith('es') && !/female|mujer|lucia|mónica|paulina|monica|valeria/i.test(v.name)) ||
       voices.find(v => v.lang.startsWith('es'));
 
-    if (esVoice) utt.voice = esVoice;
+    if (voz) utt.voice = voz;
     utt.onend   = () => stopVoice();
     utt.onerror = () => stopVoice();
     window.speechSynthesis.speak(utt);
@@ -1652,9 +1679,9 @@ function speakPetInfo() {
 
   const voices = window.speechSynthesis.getVoices();
   if (voices.length) {
-    applyVoiceAndSpeak();
+    aplicarVozYHablar();
   } else {
-    window.speechSynthesis.onvoiceschanged = applyVoiceAndSpeak;
+    window.speechSynthesis.onvoiceschanged = aplicarVozYHablar;
   }
 }
 
