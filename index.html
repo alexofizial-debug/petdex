@@ -425,6 +425,14 @@
     margin-bottom: 8px;
     filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
   }
+  .pc-img {
+    width: 100%;
+    height: 90px;
+    object-fit: cover;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    display: block;
+  }
   .pc-name { font-size: 14px; font-weight: 700; color: var(--text); text-align: center; font-family: 'Syne', sans-serif; }
   .pc-breed { font-size: 11px; color: var(--text3); text-align: center; margin-top: 2px; }
   .pc-tags { display: flex; gap: 4px; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
@@ -494,6 +502,15 @@
     filter: drop-shadow(0 8px 24px rgba(0,0,0,0.4));
   }
   .dv-name { font-size: 26px; font-weight: 800; color: var(--text); font-family: 'Syne', sans-serif; letter-spacing: -0.5px; }
+  .dv-photo {
+    width: 160px;
+    height: 160px;
+    object-fit: cover;
+    border-radius: 20px;
+    margin-bottom: 14px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    border: 2px solid var(--glass-border);
+  }
   .dv-breed { font-size: 14px; color: var(--text2); margin-top: 4px; }
   .dv-tags { display: flex; gap: 8px; justify-content: center; margin-top: 14px; }
 
@@ -651,7 +668,7 @@
   <div id="screen-camera" class="screen active">
     <div class="header">
       <div class="logo"><span class="logo-paw">🐾</span>Pet<span class="accent">Dex</span></div>
-      <span class="hbadge" id="hbadge">0 / 30</span>
+      <span class="hbadge" id="hbadge">0 / 100</span>
     </div>
 
     <div id="viewfinder-wrap">
@@ -718,7 +735,7 @@
     <div class="coll-header">
       <div class="header" style="padding:8px 0 10px">
         <div class="logo"><span class="logo-paw">🐾</span>Mi <span class="accent">colección</span></div>
-        <span class="hbadge" id="dex-count">0/30</span>
+        <span class="hbadge" id="dex-count">0/100</span>
       </div>
       <div class="stats-row">
         <div class="stat"><div class="stat-n" id="s-total">0</div><div class="stat-l">Total</div></div>
@@ -761,6 +778,7 @@
   </div>
   <div class="dv-hero">
     <span class="dv-emoji" id="dv-emoji"></span>
+    <img class="dv-photo" id="dv-photo" src="" alt="" style="display:none">
     <div class="dv-name" id="dv-name"></div>
     <div class="dv-breed" id="dv-breed"></div>
     <div class="dv-tags" id="dv-tags"></div>
@@ -863,6 +881,57 @@ const PETS = [
   {emoji:'🐶',name:'Chispa',breed:'Jack Russell Terrier',type:'Perro',origin:'Reino Unido',size:'Pequeño',life:'13-16 años',rarity:'common',traits:[['Cariño',80],['Actividad',98],['Sociabilidad',75],['Inteligencia',85]]},
   {emoji:'🐶',name:'Duque',breed:'Gran Danés',type:'Perro',origin:'Alemania',size:'Grande',life:'7-10 años',rarity:'legendary',traits:[['Cariño',85],['Actividad',60],['Sociabilidad',80],['Inteligencia',72]]},
   {emoji:'🐶',name:'Merengue',breed:'Maltés',type:'Perro',origin:'Malta',size:'Pequeño',life:'12-15 años',rarity:'common',traits:[['Cariño',95],['Actividad',50],['Sociabilidad',88],['Inteligencia',68]]},
+  // ── 70 nuevas mascotas (total 100) ──
+  {emoji:'🐱',name:'Fantasma',breed:'Birman',type:'Gato',origin:'Birmania',size:'Mediano',life:'12-16 años',rarity:'rare',traits:[['Cariño',90],['Actividad',55],['Sociabilidad',82],['Inteligencia',75]]},
+  {emoji:'🐱',name:'Cometa',breed:'Tonkinés',type:'Gato',origin:'Canadá',size:'Mediano',life:'10-16 años',rarity:'rare',traits:[['Cariño',88],['Actividad',80],['Sociabilidad',90],['Inteligencia',85]]},
+  {emoji:'🐱',name:'Topacio',breed:'Savannah',type:'Gato',origin:'EE.UU.',size:'Grande',life:'12-20 años',rarity:'legendary',traits:[['Cariño',65],['Actividad',98],['Sociabilidad',60],['Inteligencia',92]]},
+  {emoji:'🐱',name:'Glaciar',breed:'Siberian',type:'Gato',origin:'Rusia',size:'Grande',life:'11-18 años',rarity:'rare',traits:[['Cariño',85],['Actividad',72],['Sociabilidad',78],['Inteligencia',82]]},
+  {emoji:'🐱',name:'Trufa',breed:'Cornish Rex',type:'Gato',origin:'Reino Unido',size:'Pequeño',life:'11-15 años',rarity:'rare',traits:[['Cariño',92],['Actividad',88],['Sociabilidad',90],['Inteligencia',85]]},
+  {emoji:'🐱',name:'Nebulosa',breed:'Lykoi',type:'Gato',origin:'EE.UU.',size:'Mediano',life:'12-15 años',rarity:'legendary',traits:[['Cariño',78],['Actividad',82],['Sociabilidad',70],['Inteligencia',80]]},
+  {emoji:'🐱',name:'Perla',breed:'American Shorthair',type:'Gato',origin:'EE.UU.',size:'Mediano',life:'15-20 años',rarity:'common',traits:[['Cariño',80],['Actividad',62],['Sociabilidad',75],['Inteligencia',72]]},
+  {emoji:'🐱',name:'Canela',breed:'Havana Brown',type:'Gato',origin:'Reino Unido',size:'Mediano',life:'10-15 años',rarity:'rare',traits:[['Cariño',88],['Actividad',70],['Sociabilidad',85],['Inteligencia',82]]},
+  {emoji:'🐱',name:'Eclipse',breed:'Peterbald',type:'Gato',origin:'Rusia',size:'Mediano',life:'12-15 años',rarity:'legendary',traits:[['Cariño',88],['Actividad',75],['Sociabilidad',90],['Inteligencia',85]]},
+  {emoji:'🐱',name:'Polaris',breed:'Korat',type:'Gato',origin:'Tailandia',size:'Mediano',life:'15-18 años',rarity:'rare',traits:[['Cariño',82],['Actividad',65],['Sociabilidad',72],['Inteligencia',85]]},
+  {emoji:'🐱',name:'Marino',breed:'Burmilla',type:'Gato',origin:'Reino Unido',size:'Mediano',life:'10-15 años',rarity:'common',traits:[['Cariño',85],['Actividad',68],['Sociabilidad',80],['Inteligencia',78]]},
+  {emoji:'🐱',name:'Velero',breed:'Selkirk Rex',type:'Gato',origin:'EE.UU.',size:'Grande',life:'10-15 años',rarity:'rare',traits:[['Cariño',88],['Actividad',60],['Sociabilidad',82],['Inteligencia',72]]},
+  {emoji:'🐱',name:'Destello',breed:'Cymric',type:'Gato',origin:'Canadá',size:'Mediano',life:'8-14 años',rarity:'rare',traits:[['Cariño',80],['Actividad',70],['Sociabilidad',75],['Inteligencia',78]]},
+  {emoji:'🐱',name:'Titania',breed:'LaPerm',type:'Gato',origin:'EE.UU.',size:'Mediano',life:'10-15 años',rarity:'legendary',traits:[['Cariño',90],['Actividad',72],['Sociabilidad',88],['Inteligencia',80]]},
+  {emoji:'🐱',name:'Astro',breed:'Chausie',type:'Gato',origin:'EE.UU.',size:'Grande',life:'12-16 años',rarity:'legendary',traits:[['Cariño',60],['Actividad',95],['Sociabilidad',55],['Inteligencia',90]]},
+  {emoji:'🐱',name:'Escarcha',breed:'Neva Masquerade',type:'Gato',origin:'Rusia',size:'Grande',life:'12-15 años',rarity:'rare',traits:[['Cariño',80],['Actividad',68],['Sociabilidad',72],['Inteligencia',78]]},
+  {emoji:'🐱',name:'Pizca',breed:'Singapura',type:'Gato',origin:'Singapur',size:'Pequeño',life:'11-15 años',rarity:'common',traits:[['Cariño',85],['Actividad',88],['Sociabilidad',82],['Inteligencia',85]]},
+  {emoji:'🐱',name:'Viento',breed:'Egyptian Mau',type:'Gato',origin:'Egipto',size:'Mediano',life:'13-16 años',rarity:'rare',traits:[['Cariño',70],['Actividad',95],['Sociabilidad',65],['Inteligencia',88]]},
+  {emoji:'🐱',name:'Quasar',breed:'Highlander',type:'Gato',origin:'EE.UU.',size:'Grande',life:'10-15 años',rarity:'legendary',traits:[['Cariño',82],['Actividad',78],['Sociabilidad',80],['Inteligencia',75]]},
+  {emoji:'🐱',name:'Sereno',breed:'Ragamuffin',type:'Gato',origin:'EE.UU.',size:'Grande',life:'12-16 años',rarity:'common',traits:[['Cariño',95],['Actividad',42],['Sociabilidad',88],['Inteligencia',68]]},
+  {emoji:'🐶',name:'Bravo',breed:'Schnauzer Miniatura',type:'Perro',origin:'Alemania',size:'Pequeño',life:'12-15 años',rarity:'common',traits:[['Cariño',82],['Actividad',78],['Sociabilidad',72],['Inteligencia',88]]},
+  {emoji:'🐶',name:'Pelusa',breed:'Pomerania',type:'Perro',origin:'Alemania',size:'Pequeño',life:'12-16 años',rarity:'common',traits:[['Cariño',88],['Actividad',72],['Sociabilidad',80],['Inteligencia',75]]},
+  {emoji:'🐶',name:'Ranger',breed:'Pastor Australiano',type:'Perro',origin:'EE.UU.',size:'Mediano',life:'13-15 años',rarity:'rare',traits:[['Cariño',85],['Actividad',98],['Sociabilidad',80],['Inteligencia',96]]},
+  {emoji:'🐶',name:'Kira',breed:'Husky Miniatura',type:'Perro',origin:'EE.UU.',size:'Mediano',life:'12-14 años',rarity:'rare',traits:[['Cariño',80],['Actividad',92],['Sociabilidad',82],['Inteligencia',78]]},
+  {emoji:'🐶',name:'Goliat',breed:'Mastín Napolitano',type:'Perro',origin:'Italia',size:'Grande',life:'7-9 años',rarity:'legendary',traits:[['Cariño',78],['Actividad',45],['Sociabilidad',60],['Inteligencia',68]]},
+  {emoji:'🐶',name:'Sushi',breed:'Shih Tzu',type:'Perro',origin:'Tibet/China',size:'Pequeño',life:'10-18 años',rarity:'common',traits:[['Cariño',92],['Actividad',45],['Sociabilidad',85],['Inteligencia',65]]},
+  {emoji:'🐶',name:'Indiana',breed:'Vizsla',type:'Perro',origin:'Hungría',size:'Mediano',life:'12-15 años',rarity:'rare',traits:[['Cariño',90],['Actividad',92],['Sociabilidad',85],['Inteligencia',88]]},
+  {emoji:'🐶',name:'Tormenta',breed:'Pastor Belga Malinois',type:'Perro',origin:'Bélgica',size:'Grande',life:'10-14 años',rarity:'rare',traits:[['Cariño',80],['Actividad',98],['Sociabilidad',70],['Inteligencia',98]]},
+  {emoji:'🐶',name:'Burbuja',breed:'Bulldog Inglés',type:'Perro',origin:'Reino Unido',size:'Mediano',life:'8-10 años',rarity:'common',traits:[['Cariño',88],['Actividad',35],['Sociabilidad',80],['Inteligencia',58]]},
+  {emoji:'🐶',name:'Cuarzo',breed:'Weimaraner',type:'Perro',origin:'Alemania',size:'Grande',life:'11-13 años',rarity:'rare',traits:[['Cariño',85],['Actividad',90],['Sociabilidad',80],['Inteligencia',88]]},
+  {emoji:'🐶',name:'Fuego',breed:'Irish Setter',type:'Perro',origin:'Irlanda',size:'Grande',life:'11-15 años',rarity:'rare',traits:[['Cariño',88],['Actividad',92],['Sociabilidad',90],['Inteligencia',75]]},
+  {emoji:'🐶',name:'Perla',breed:'Bichón Maltés',type:'Perro',origin:'Malta',size:'Pequeño',life:'12-15 años',rarity:'common',traits:[['Cariño',95],['Actividad',48],['Sociabilidad',88],['Inteligencia',68]]},
+  {emoji:'🐶',name:'Komodo',breed:'Komondor',type:'Perro',origin:'Hungría',size:'Grande',life:'10-12 años',rarity:'legendary',traits:[['Cariño',70],['Actividad',65],['Sociabilidad',45],['Inteligencia',78]]},
+  {emoji:'🐶',name:'Atlas',breed:'Bernés de la Montaña',type:'Perro',origin:'Suiza',size:'Grande',life:'6-8 años',rarity:'rare',traits:[['Cariño',92],['Actividad',70],['Sociabilidad',90],['Inteligencia',80]]},
+  {emoji:'🐶',name:'Chico',breed:'Chihuahua de Pelo Largo',type:'Perro',origin:'México',size:'Pequeño',life:'12-20 años',rarity:'common',traits:[['Cariño',85],['Actividad',65],['Sociabilidad',58],['Inteligencia',72]]},
+  {emoji:'🐶',name:'Niebla',breed:'Bloodhound',type:'Perro',origin:'Bélgica',size:'Grande',life:'10-12 años',rarity:'rare',traits:[['Cariño',85],['Actividad',70],['Sociabilidad',78],['Inteligencia',72]]},
+  {emoji:'🐶',name:'Copito',breed:'Spitz Japonés',type:'Perro',origin:'Japón',size:'Pequeño',life:'10-16 años',rarity:'common',traits:[['Cariño',88],['Actividad',68],['Sociabilidad',82],['Inteligencia',75]]},
+  {emoji:'🐶',name:'Flash',breed:'Whippet',type:'Perro',origin:'Reino Unido',size:'Mediano',life:'12-15 años',rarity:'rare',traits:[['Cariño',82],['Actividad',95],['Sociabilidad',78],['Inteligencia',75]]},
+  {emoji:'🐶',name:'Orión',breed:'Afghan Hound',type:'Perro',origin:'Afganistán',size:'Grande',life:'12-14 años',rarity:'legendary',traits:[['Cariño',60],['Actividad',85],['Sociabilidad',50],['Inteligencia',60]]},
+  {emoji:'🐶',name:'Cosmo',breed:'Nova Scotia Duck Tolling Retriever',type:'Perro',origin:'Canadá',size:'Mediano',life:'12-14 años',rarity:'legendary',traits:[['Cariño',88],['Actividad',95],['Sociabilidad',85],['Inteligencia',90]]},
+  {emoji:'🐶',name:'Panda',breed:'Shar Pei',type:'Perro',origin:'China',size:'Mediano',life:'8-12 años',rarity:'rare',traits:[['Cariño',72],['Actividad',55],['Sociabilidad',50],['Inteligencia',70]]},
+  {emoji:'🐶',name:'Estrella',breed:'Samoyedo Miniatura',type:'Perro',origin:'Rusia',size:'Pequeño',life:'12-14 años',rarity:'rare',traits:[['Cariño',92],['Actividad',80],['Sociabilidad',90],['Inteligencia',78]]},
+  {emoji:'🐶',name:'Bronco',breed:'Bull Terrier',type:'Perro',origin:'Reino Unido',size:'Mediano',life:'10-14 años',rarity:'rare',traits:[['Cariño',82],['Actividad',88],['Sociabilidad',68],['Inteligencia',72]]},
+  {emoji:'🐶',name:'Galeta',breed:'Cavalier King Charles Spaniel',type:'Perro',origin:'Reino Unido',size:'Pequeño',life:'9-15 años',rarity:'common',traits:[['Cariño',96],['Actividad',52],['Sociabilidad',92],['Inteligencia',70]]},
+  {emoji:'🐶',name:'Tornado',breed:'Rhodesian Ridgeback',type:'Perro',origin:'Zimbabue',size:'Grande',life:'10-12 años',rarity:'legendary',traits:[['Cariño',78],['Actividad',90],['Sociabilidad',68],['Inteligencia',82]]},
+  {emoji:'🐶',name:'Mochi',breed:'Chow Chow',type:'Perro',origin:'China',size:'Grande',life:'8-12 años',rarity:'rare',traits:[['Cariño',65],['Actividad',50],['Sociabilidad',35],['Inteligencia',72]]},
+  {emoji:'🐶',name:'Speedy',breed:'Greyhound',type:'Perro',origin:'Oriente Medio',size:'Grande',life:'10-14 años',rarity:'rare',traits:[['Cariño',80],['Actividad',98],['Sociabilidad',72],['Inteligencia',70]]},
+  {emoji:'🐶',name:'Curry',breed:'Basenji',type:'Perro',origin:'África Central',size:'Mediano',life:'13-14 años',rarity:'legendary',traits:[['Cariño',60],['Actividad',88],['Sociabilidad',50],['Inteligencia',88]]},
+  {emoji:'🐶',name:'Soplo',breed:'Spinone Italiano',type:'Perro',origin:'Italia',size:'Grande',life:'10-12 años',rarity:'common',traits:[['Cariño',88],['Actividad',70],['Sociabilidad',85],['Inteligencia',72]]},
+  {emoji:'🐶',name:'Ninja',breed:'Shikoku',type:'Perro',origin:'Japón',size:'Mediano',life:'10-12 años',rarity:'legendary',traits:[['Cariño',65],['Actividad',85],['Sociabilidad',45],['Inteligencia',82]]},
 ];
 
 const TRAIT_COLORS = { common:'#888780', rare:'#D85A30', legendary:'#EF9F27' };
@@ -1088,7 +1157,7 @@ async function analyzePhoto() {
     }
 
     // Agregar a colección
-    pet = { ...pet, capturedAt: new Date().toISOString() };
+    pet = { ...pet, capturedAt: new Date().toISOString(), photo: capturedImgData ? 'data:image/jpeg;base64,' + capturedImgData : null };
     collection.push(pet);
     save();
     updateStats();
@@ -1225,8 +1294,11 @@ function renderGrid() {
     const rarClass = p.rarity==='legendary'?'legendary':p.rarity==='rare'?'rare':'';
     const tagClass = p.rarity==='legendary'?'tag-legendary':p.rarity==='rare'?'tag-rare':'tag-common';
     const tagLbl = p.rarity==='legendary'?'Legendario':p.rarity==='rare'?'Raro':'Común';
+    const visual = p.photo
+      ? `<img class="pc-img" src="${p.photo}" alt="${p.name}" loading="lazy">`
+      : `<span class="pc-emoji">${p.emoji}</span>`;
     return `<div class="pet-card ${rarClass}" onclick="openDetail(${idx})">
-      <span class="pc-emoji">${p.emoji}</span>
+      ${visual}
       <div class="pc-name">${p.name}</div>
       <div class="pc-breed">${p.breed}</div>
       <div style="font-size:10px;color:var(--text3);text-align:center;margin-top:3px">${p.capturedAt ? new Date(p.capturedAt).toLocaleString('es-CL',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : ''}</div>
@@ -1244,7 +1316,18 @@ function openDetail(i) {
   currentPet = p;
   const color = TRAIT_COLORS[p.rarity];
   document.getElementById('dv-title').textContent = p.name;
-  document.getElementById('dv-emoji').textContent = p.emoji;
+  // Mostrar foto o emoji en el detalle
+  const dvEmoji = document.getElementById('dv-emoji');
+  const dvPhoto = document.getElementById('dv-photo');
+  if (p.photo) {
+    dvPhoto.src = p.photo;
+    dvPhoto.style.display = 'block';
+    dvEmoji.style.display = 'none';
+  } else {
+    dvEmoji.textContent = p.emoji;
+    dvEmoji.style.display = 'block';
+    dvPhoto.style.display = 'none';
+  }
   document.getElementById('dv-name').textContent = p.name;
   document.getElementById('dv-breed').textContent = p.breed;
   document.getElementById('dv-type').textContent = p.type;
