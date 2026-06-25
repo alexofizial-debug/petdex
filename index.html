@@ -887,7 +887,7 @@
     <div class="dv-tags" id="dv-tags"></div>
     <button class="dv-speak-btn" id="dv-speak-btn" onclick="speakPetInfo()">
       <svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
-      Análisis J.A.R.V.I.S.
+      Escuchar descripción
     </button>
   </div>
   <div class="dv-section">
@@ -1595,29 +1595,8 @@ function stopVoice() {
   const btn = document.getElementById('dv-speak-btn');
   if (btn) {
     btn.classList.remove('speaking');
-    btn.innerHTML = `<svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg> Análisis J.A.R.V.I.S.`;
+    btn.innerHTML = `<svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg> Escuchar descripción`;
   }
-}
-
-function buildJarvisTextoES(p, aiDesc) {
-  const tipo   = p.type === 'Perro' ? 'espécimen canino' : 'espécimen felino';
-  const rareza = p.rarity === 'legendary' ? 'de rareza excepcional'
-               : p.rarity === 'rare'      ? 'de rareza elevada'
-               :                            'de clasificación estándar';
-  const rasgos = p.traits && p.traits.length
-    ? `Métricas de comportamiento: ${p.traits.map(([l,v]) => `${l.toLowerCase()}, ${v} por ciento`).join('. ')}.`
-    : '';
-
-  let texto =
-    `Análisis completado. He identificado un ${tipo} ${rareza}. ` +
-    `Designación: ${p.name}. ` +
-    `Clasificación de raza: ${p.breed}. ` +
-    `Origen geográfico: ${p.origin}. ` +
-    `Perfil físico: tamaño ${p.size}. Expectativa de vida estimada: ${p.life}. ` +
-    rasgos;
-
-  if (aiDesc) texto += ` Inteligencia adicional: ${aiDesc}`;
-  return texto;
 }
 
 function speakPetInfo() {
@@ -1631,57 +1610,55 @@ function speakPetInfo() {
   const aiText = (!aiEl.querySelector('.ai-loading-dots') && aiEl.textContent && !sinInfo.includes(aiEl.textContent.trim()))
     ? aiEl.textContent.trim() : '';
 
-  const texto = buildJarvisTextoES(p, aiText);
+  const tipoLabel = p.type === 'Perro' ? 'perro' : 'gato';
+  let texto = `${p.name}. ${tipoLabel} ${p.breed}, originario de ${p.origin}. Tamaño ${p.size}. Vida promedio de ${p.life}.`;
+  if (aiText) texto += ' ' + aiText;
 
   isSpeaking = true;
   btn.classList.add('speaking');
   btn.innerHTML = `<svg viewBox="0 0 24 24"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> Detener`;
 
-  window.speechSynthesis.cancel();
-  const utt = new SpeechSynthesisUtterance(texto);
-
-  // ── JARVIS en español latino ──
-  // Voz masculina grave, formal, cadencia medida y autoritaria
-  // Español latinoamericano: es-MX, es-US, es-419
-  // pitch: 0.82 → barítono bajo (~110-120 Hz)
-  // rate:  0.86 → deliberado, con peso en cada palabra
-  utt.lang   = 'es-MX';
-  utt.rate   = 0.86;
-  utt.pitch  = 0.82;
-  utt.volume = 1;
-
-  function aplicarVozYHablar() {
+  function hablar() {
+    window.speechSynthesis.cancel();
     const voices = window.speechSynthesis.getVoices();
 
-    // Prioridad de voces masculinas en español latino:
-    // Mac:     Juan (es-MX, masculino — el más cercano a JARVIS latino)
-    // Windows: Microsoft Raul (es-MX), Microsoft Pablo (es-ES pero grave)
-    // Chrome:  Google español (es-US o es-MX)
-    // Android: voz del sistema en español
+    // Elegir LA MEJOR voz disponible en este dispositivo
+    // Orden: voces premium de alta calidad primero
     const voz =
-      voices.find(v => /juan/i.test(v.name)   && v.lang.startsWith('es')) ||
-      voices.find(v => /raul|raúl/i.test(v.name) && v.lang.startsWith('es')) ||
-      voices.find(v => /diego/i.test(v.name)  && v.lang.startsWith('es')) ||
-      voices.find(v => /jorge/i.test(v.name)  && v.lang.startsWith('es')) ||
-      voices.find(v => /pablo/i.test(v.name)  && v.lang.startsWith('es')) ||
-      voices.find(v => /miguel/i.test(v.name) && v.lang.startsWith('es')) ||
-      voices.find(v => /carlos/i.test(v.name) && v.lang.startsWith('es')) ||
-      voices.find(v => (v.lang === 'es-MX' || v.lang === 'es-US') && !/female|mujer|lucia|mónica|paulina|monica|valeria/i.test(v.name)) ||
+      // Mac/iOS — voces premium "enhanced/compact"
+      voices.find(v => /mónica|monica/i.test(v.name)  && v.lang.startsWith('es')) ||
+      voices.find(v => /paulina/i.test(v.name)        && v.lang.startsWith('es')) ||
+      voices.find(v => /juan/i.test(v.name)           && v.lang.startsWith('es')) ||
+      voices.find(v => /diego/i.test(v.name)          && v.lang.startsWith('es')) ||
+      // Windows — Microsoft voces neurales
+      voices.find(v => /sabina/i.test(v.name)         && v.lang.startsWith('es')) ||
+      voices.find(v => /raul|raúl/i.test(v.name)     && v.lang.startsWith('es')) ||
+      voices.find(v => /helena/i.test(v.name)         && v.lang.startsWith('es')) ||
+      voices.find(v => /laura/i.test(v.name)          && v.lang.startsWith('es')) ||
+      // Google Chrome — voz online
+      voices.find(v => /google/i.test(v.name)         && v.lang.startsWith('es')) ||
+      // Cualquier español local
       voices.find(v => v.lang === 'es-MX') ||
-      voices.find(v => v.lang.startsWith('es') && !/female|mujer|lucia|mónica|paulina|monica|valeria/i.test(v.name)) ||
+      voices.find(v => v.lang === 'es-ES') ||
       voices.find(v => v.lang.startsWith('es'));
 
+    const utt = new SpeechSynthesisUtterance(texto);
+    utt.lang   = 'es-MX';
+    utt.rate   = 0.90;
+    utt.pitch  = 1.0;
+    utt.volume = 1;
     if (voz) utt.voice = voz;
+
     utt.onend   = () => stopVoice();
     utt.onerror = () => stopVoice();
     window.speechSynthesis.speak(utt);
   }
 
-  const voices = window.speechSynthesis.getVoices();
-  if (voices.length) {
-    aplicarVozYHablar();
+  // Esperar a que las voces carguen si aún no están listas
+  if (window.speechSynthesis.getVoices().length) {
+    hablar();
   } else {
-    window.speechSynthesis.onvoiceschanged = aplicarVozYHablar;
+    window.speechSynthesis.onvoiceschanged = hablar;
   }
 }
 
