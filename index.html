@@ -1096,11 +1096,6 @@ async function startCamera() {
       audio: false
     });
     window._cameraStream = stream;
-    // Restaurar torch si estaba activo antes de flip
-    if (_flashOn && facingMode === 'environment') {
-      const t = stream.getVideoTracks()[0];
-      if (t) t.applyConstraints({ advanced: [{ torch: true }] }).catch(() => {});
-    }
     const video = document.getElementById('viewfinder');
     video.srcObject = stream;
     document.getElementById('cam-start').style.display = 'none';
@@ -1625,31 +1620,60 @@ let isSpeaking = false;
 let _flashOn = false;
 
 async function toggleFlash() {
-  // Torch solo funciona con camara trasera activa
-  if (!cameraActive) return;
+  if (!cameraActive) { await startCamera(); }
+
+  // Forzar camara trasera (torch solo disponible en camara trasera)
   if (facingMode !== 'environment') {
     facingMode = 'environment';
-    await startCamera();
-    await new Promise(r => setTimeout(r, 300));
+    _flashOn = false;
   }
-
-  const activeStream = window._cameraStream || stream;
-  const track = activeStream && activeStream.getVideoTracks()[0];
-  if (!track) return;
 
   _flashOn = !_flashOn;
 
+  // Metodo mas compatible: reiniciar stream con torch en los constraints
+  // Esto funciona en Chrome Android y la mayoria de navegadores modernos
   try {
-    await track.applyConstraints({ advanced: [{ torch: _flashOn }] });
+    if (stream) { stream.getTracks().forEach(t => t.stop()); }
+
+    const constraints = {
+      video: {
+        facingMode: { exact: 'environment' },
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+        advanced: [{ torch: _flashOn }]
+      },
+      audio: false
+    };
+
+    stream = await navigator.mediaDevices.getUserMedia(constraints);
+    window._cameraStream = stream;
+
+    const video = document.getElementById('viewfinder');
+    video.srcObject = stream;
+
+    // Actualizar UI del boton
     document.getElementById('flash-icon-off').style.display = _flashOn ? 'none' : '';
     document.getElementById('flash-icon-on').style.display  = _flashOn ? ''     : 'none';
     document.getElementById('btn-flash').style.background   = _flashOn ? 'rgba(167,139,250,0.25)' : '';
+
   } catch(e) {
-    _flashOn = !_flashOn; // revertir estado
-    const btn = document.getElementById('btn-flash');
-    btn.title = 'Flash no soportado en este dispositivo';
-    btn.style.opacity = '0.35';
-    setTimeout(() => btn.style.opacity = '1', 1000);
+    _flashOn = !_flashOn; // revertir
+    // Fallback: intentar applyConstraints sobre el track existente
+    const track = stream && stream.getVideoTracks()[0];
+    if (track) {
+      try {
+        await track.applyConstraints({ advanced: [{ torch: _flashOn }] });
+        _flashOn = !_flashOn; // revertir el revert porque funcionó
+        document.getElementById('flash-icon-off').style.display = _flashOn ? 'none' : '';
+        document.getElementById('flash-icon-on').style.display  = _flashOn ? ''     : 'none';
+        document.getElementById('btn-flash').style.background   = _flashOn ? 'rgba(167,139,250,0.25)' : '';
+      } catch(e2) {
+        // No disponible en este dispositivo
+        const btn = document.getElementById('btn-flash');
+        btn.style.opacity = '0.35';
+        setTimeout(() => btn.style.opacity = '1', 900);
+      }
+    }
   }
 }
 
