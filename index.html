@@ -1092,10 +1092,15 @@ async function startCamera() {
   try {
     if (stream) { stream.getTracks().forEach(t => t.stop()); }
     stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+      video: { facingMode: { ideal: facingMode }, width: { ideal: 1280 }, height: { ideal: 720 } },
       audio: false
     });
     window._cameraStream = stream;
+    // Restaurar torch si estaba activo antes de flip
+    if (_flashOn && facingMode === 'environment') {
+      const t = stream.getVideoTracks()[0];
+      if (t) t.applyConstraints({ advanced: [{ torch: true }] }).catch(() => {});
+    }
     const video = document.getElementById('viewfinder');
     video.srcObject = stream;
     document.getElementById('cam-start').style.display = 'none';
@@ -1108,6 +1113,13 @@ async function startCamera() {
 
 async function flipCamera() {
   facingMode = facingMode === 'environment' ? 'user' : 'environment';
+  // Apagar flash al cambiar a camara frontal
+  if (facingMode === 'user' && _flashOn) {
+    _flashOn = false;
+    document.getElementById('flash-icon-off').style.display = '';
+    document.getElementById('flash-icon-on').style.display  = 'none';
+    document.getElementById('btn-flash').style.background   = '';
+  }
   if (cameraActive) await startCamera();
 }
 
@@ -1613,24 +1625,32 @@ let isSpeaking = false;
 let _flashOn = false;
 
 async function toggleFlash() {
-  const stream = window._cameraStream;
-  if (!stream) return;
-  const track = stream.getVideoTracks()[0];
-  if (!track) return;
-  const caps = track.getCapabilities ? track.getCapabilities() : {};
-  if (!caps.torch) {
-    // Dispositivo no soporta torch — mostrar aviso breve
-    const btn = document.getElementById('btn-flash');
-    btn.style.opacity = '0.3';
-    setTimeout(() => btn.style.opacity = '1', 800);
-    return;
+  // Torch solo funciona con camara trasera activa
+  if (!cameraActive) return;
+  if (facingMode !== 'environment') {
+    facingMode = 'environment';
+    await startCamera();
+    await new Promise(r => setTimeout(r, 300));
   }
+
+  const activeStream = window._cameraStream || stream;
+  const track = activeStream && activeStream.getVideoTracks()[0];
+  if (!track) return;
+
   _flashOn = !_flashOn;
-  await track.applyConstraints({ advanced: [{ torch: _flashOn }] });
-  document.getElementById('flash-icon-off').style.display = _flashOn ? 'none'  : '';
-  document.getElementById('flash-icon-on').style.display  = _flashOn ? ''      : 'none';
-  document.getElementById('btn-flash').style.background   = _flashOn
-    ? 'rgba(167,139,250,0.25)' : '';
+
+  try {
+    await track.applyConstraints({ advanced: [{ torch: _flashOn }] });
+    document.getElementById('flash-icon-off').style.display = _flashOn ? 'none' : '';
+    document.getElementById('flash-icon-on').style.display  = _flashOn ? ''     : 'none';
+    document.getElementById('btn-flash').style.background   = _flashOn ? 'rgba(167,139,250,0.25)' : '';
+  } catch(e) {
+    _flashOn = !_flashOn; // revertir estado
+    const btn = document.getElementById('btn-flash');
+    btn.title = 'Flash no soportado en este dispositivo';
+    btn.style.opacity = '0.35';
+    setTimeout(() => btn.style.opacity = '1', 1000);
+  }
 }
 
 function stopVoice() {
